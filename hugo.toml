@@ -35,12 +35,8 @@ buildExpired = false
 
   [params.homeInfoParams]
     Title = "Charles Chen"
-    Content = """
-Welcome to my blog. I write about things I find interesting.
-
-<img style="padding-top:10px;width:100%;height:auto" src="/images/home.jpg" alt="Sand dunes and a lone acacia tree in Sossusvlei, Namibia">
-<span style="display:block;font-size:0.7em;opacity:0.55;padding-bottom:10px">Photo: <a href="https://commons.wikimedia.org/wiki/File:Duna_Elim,_Sossusvlei,_Namibia,_2018-08-06,_DD_165-162_PAN.jpg">Diego Delso</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a></span>
-"""
+    Content = "Welcome to my blog. I write about things I find interesting."
+    avatar = "/images/avatar.jpeg"
 
   [[params.socialIcons]]
     name = "github"
