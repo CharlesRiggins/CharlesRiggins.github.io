@@ -57,6 +57,24 @@ git add -A && git commit -m "..." && git push
   - `math: true` — opt-in **per post** to load MathJax (`$...$` inline, `$$...$$` display).
     Math is intentionally NOT enabled site-wide, so non-math pages stay lightweight.
 - Code blocks use fenced ```` ```lang ```` syntax (highlight.js / Hugo Chroma).
+- **Post images** live in `static/images/<post-slug>/` and are referenced as
+  `/images/<post-slug>/img-NN.ext`. Keep images local (no hotlinking to external CDNs)
+  so the site is self-contained. The slug must match the post's filename.
+
+## Migrating posts from Medium
+
+The blog content was originally migrated from Medium (`@crclq2018`). To import or
+re-import posts:
+
+- The Medium RSS feed `https://medium.com/feed/@crclq2018` embeds the **full** article
+  HTML in `<content:encoded>` (not summaries) plus all image URLs — use it as the source
+  rather than scraping rendered pages. Note: the feed only carries the ~10 most recent posts.
+- Convert HTML → Markdown with `markdownify` + `beautifulsoup4` (installed via
+  `pip install --user`). Strip Medium tracking pixels (`<img>` with `/stat?` in the src).
+- Download images with **`curl`**, not Python's `urllib` — see the SSL gotcha below.
+- Per-post front matter is generated with `draft: false` and `math: false` by default
+  (flip `math` to `true` manually if a post needs it). Auto-tags and `canonicalURL` are
+  NOT used — the github.io copy is treated as canonical.
 
 ## Key files
 
@@ -75,3 +93,6 @@ git add -A && git commit -m "..." && git push
 
 - `languageCode` in `hugo.toml` emits a deprecation warning on this Hugo version — harmless.
 - `public/` and `resources/_gen/` are gitignored build artifacts — never commit them.
+- **macOS python.org Python has no CA certificates by default** — `urllib`/`requests`
+  downloads fail with `CERTIFICATE_VERIFY_FAILED`. Use `curl` for HTTP(S) downloads in
+  scripts, or run `Install Certificates.command` from the Python install.
