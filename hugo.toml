@@ -48,11 +48,6 @@ buildExpired = false
     name = "About"
     url = "/about/"
     weight = 10
-  [[menu.main]]
-    identifier = "posts"
-    name = "Posts"
-    url = "/posts/"
-    weight = 20
 
 [outputs]
   home = ["HTML", "RSS", "JSON"]
