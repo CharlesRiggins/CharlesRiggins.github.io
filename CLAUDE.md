@@ -70,6 +70,4 @@ git add -A && git commit -m "..." && git push
 ## Gotchas
 
 - `languageCode` in `hugo.toml` emits a deprecation warning on this Hugo version — harmless.
-- The deploy workflow's actions warn about Node.js 20 deprecation — still functional;
-  bump action versions to silence if desired.
 - `public/` and `resources/_gen/` are gitignored build artifacts — never commit them.
