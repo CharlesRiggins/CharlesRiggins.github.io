@@ -42,6 +42,10 @@ buildExpired = false
     name = "github"
     url = "https://github.com/CharlesRiggins"
 
+  [[params.socialIcons]]
+    name = "linkedin"
+    url = "https://www.linkedin.com/in/charles-riggins-chen/"
+
 # Left nav menu (like the "About" link on Keller's site)
 [menu]
   [[menu.main]]

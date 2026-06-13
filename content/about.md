@@ -7,10 +7,9 @@ summary: "About me"
 Hi, I'm Charles Riggins — an AI engineer and machine learning practitioner working on
 large language models.
 
-I'm currently an AI Engineer / MLE at **Tencent**, working on LLM alignment —
-red-teaming, multi-stage post-training pipelines, and model midtraining — along with
-researching post-training dynamics and interpretability. More broadly, I'm interested in
-many areas of LLMs.
+I'm currently an MLE at **Tencent**, working on LLM alignment — spanning red-teaming,
+post-training pipelines, and midtraining. I'm interested in understanding how post-training
+shapes model behavior, studying training dynamics and model interpretability.
 
 Before Tencent, I was a founding engineer at **DeepLang AI**, where I
 worked across the full LLM stack: pretraining and post-training, inference
