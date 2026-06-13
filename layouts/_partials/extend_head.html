@@ -1,0 +1,23 @@
+{{/* Loads MathJax 3 only on pages with `math: true` in front matter, or when site param `math = true`. */}}
+{{ if or .Params.math .Site.Params.math }}
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$', '$$'], ['\\[', '\\]']],
+      processEscapes: true,
+      processEnvironments: true
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    }
+  };
+  window.addEventListener('load', () => {
+    document.querySelectorAll('mjx-container').forEach(function (e) {
+      e.parentElement.classList += 'has-jax';
+    });
+  });
+</script>
+<script type="text/javascript" id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+{{ end }}

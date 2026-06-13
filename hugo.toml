@@ -1,0 +1,58 @@
+baseURL = "https://charlesriggins.github.io/"
+languageCode = "en-us"
+title = "Charles Chen blog"
+theme = "PaperMod"
+
+enableRobotsTXT = true
+buildDrafts = false
+buildFuture = false
+buildExpired = false
+
+# Enable raw HTML in markdown (needed for some math/embeds)
+[markup]
+  [markup.goldmark.renderer]
+    unsafe = true
+  [markup.highlight]
+    noClasses = false
+    codeFences = true
+    guessSyntax = true
+    lineNos = false
+    style = "github"
+
+[params]
+  env = "production"
+  description = "Personal blog"
+  author = "Charles Chen"
+  defaultTheme = "auto"        # auto | light | dark — shows the sun/moon toggle
+  ShowReadingTime = true
+  ShowShareButtons = false
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = false
+  ShowCodeCopyButtons = true
+  ShowToc = false
+  disableThemeToggle = false
+  # math is enabled per-post via `math: true` in front matter
+
+  [params.homeInfoParams]
+    Title = "Charles Chen"
+    Content = "Welcome to my blog. I write about things I find interesting."
+
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/CharlesRiggins"
+
+# Left nav menu (like the "About" link on Keller's site)
+[menu]
+  [[menu.main]]
+    identifier = "about"
+    name = "About"
+    url = "/about/"
+    weight = 10
+  [[menu.main]]
+    identifier = "posts"
+    name = "Posts"
+    url = "/posts/"
+    weight = 20
+
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
