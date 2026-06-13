@@ -61,9 +61,10 @@ git add -A && git commit -m "..." && git push
 ## Key files
 
 - `hugo.toml` — site config: title, menus, `params` (theme toggle, reading time, social icons).
-  The homepage banner image is set in `params.homeInfoParams.Content` (HTML `<img>` +
-  attribution line). Banner file: `static/images/home.jpg` (CC BY-SA 4.0 — see `CREDITS.md`).
-  `unsafe = true` under `markup.goldmark.renderer` is what lets that inline HTML render.
+  Homepage avatar: `params.homeInfoParams.avatar = "/images/avatar.jpeg"`, rendered by the
+  custom `layouts/_partials/home_info.html` override (title + intro left, circular avatar right).
+  Styling in `assets/css/extended/home.css` (PaperMod auto-loads `assets/css/extended/*.css`).
+  The avatar is the owner's own photo — no attribution needed.
 - `layouts/_partials/extend_head.html` — MathJax loader (PaperMod has no built-in math).
   Note: PaperMod uses the `_partials/` dir (newer layout), not `partials/`.
 - `.github/workflows/deploy.yml` — build + deploy pipeline.
