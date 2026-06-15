@@ -5,9 +5,9 @@ draft: false
 math: false
 ---
 
-> *Fake it before you make it.”*
+> *"Fake it before you make it."*
 
-## Read fast but write slow
+### Fast to read, slow to write
 
 Large language models are autoregressive: they can process thousands of tokens in a single forward pass, but they still generate output one token at a time. The technical term for that generation step is **decoding**—and decoding is slow.
 
@@ -22,7 +22,7 @@ We’ll cover:
 3. What the results look like
 4. Why verification uses rejection sampling
 
-## What is Speculative Sampling
+### What speculative sampling is
 
 At each decode step, a lightweight predictor proposes the next **K** tokens and temporarily appends them to the sequence. The full model runs one forward pass on that extended input and **verifies** those guesses in order—accepting each token only if it matches what the model would have emitted under standard decoding.
 
@@ -47,7 +47,7 @@ Visually, you can think of the sequence as:
 
 The key insight: **when output is predictable, guess ahead and verify in one pass instead of decoding token by token**.
 
-## Using N-grams to Guess the Future
+### Using N-grams to guess the future
 
 That leaves one practical question: **how do we guess?**
 
@@ -77,7 +77,7 @@ It also works in other languages, Chinese for example:
 
 You do not need to read Chinese to see the pattern: **特斯拉** already appears in the input. The latest output token is **特**; trigram matching predicts **斯拉** next—the greyed suggestion in the figure. And it turns out to be a correct prediction.
 
-## What the Results Look Like
+### What the results look like
 
 With **N = 4** and **K = 3**, each decode step can yield one to four tokens. The image below colors tokens by how many tokens were decoded **in one step**:
 
@@ -92,7 +92,7 @@ Each row shows **raw tokens** (not detokenized text):
 
 On tasks that generate repetitive outputs like text summaries, speculation hits often enough that decoding gets noticeably faster.
 
-## Why Verification Uses Rejection Sampling
+### Why verification uses rejection sampling
 
 Speculative sampling requires a rule to decide whether to **accept** a predicted token. That raises a natural question: **what criterion should validation use?** Could we simply accept a speculative token whenever it matches the main model’s Top-1 prediction?
 
@@ -112,7 +112,7 @@ The key question is not simply whether the draft token matches the Top-1 choice.
 
 This matters because speculative decoding is not just about speed. It also needs to stay faithful to the behavior of the original sampler and the diversity of the output distribution. Rejection sampling is the piece that lets us **guess ahead without changing what distribution we are sampling from**.
 
-## Closing Thoughts
+### Closing thoughts
 
 N-gram–based speculative sampling is not glamorous. It doesn’t require training another model, or fancy distillation. It simply asks:
 
