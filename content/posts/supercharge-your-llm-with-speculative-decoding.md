@@ -5,132 +5,118 @@ draft: false
 math: false
 ---
 
-#### Guess it before you know it
+> *Fake it before you make it.”*
 
-#### Read fast but write slow
+## Read fast but write slow
 
-Large language models are autoregressive, meaning they read thousands of tokens at once but output one token at a time. A fancy term for AI’s output operation is decode. Decoding is slow.
+Large language models are autoregressive: they can process thousands of tokens in a single forward pass, but they still generate output one token at a time. The technical term for that generation step is **decoding**—and decoding is slow.
 
-Yet there’s a simple but surprisingly effective trick. It’s called **speculative decoding**. The concept is easy. You guess what the LLM is about to say. You feed your guess to the LLM and let it read them at once. Remember that AI can read many words at a time. If you guess it right, you essentially help the LLM output many tokens at once.
+There is a simple but surprisingly effective trick called **speculative decoding**. The idea is straightforward: guess what the model is about to say next, append those words to the context, and run the model once to read and verify them. A guess counts as valid output only if the model confirms it would have produced that token anyway—then you effectively get multiple tokens from a single decode step.
 
-One way to guess the tokens is to find the word patterns that appeared previously. For example, if you mentioned Trump in your questions and the AI said “the president”, it makes sense to guess that it is going to say “of the United States” next.
+One way to guess is to look for patterns that already appeared in the text. For example, if your text is about USA and the model just said *“United”*, a reasonable next guess is *“States of America”*.
 
 We’ll cover:
 
-1. What speculative sampling actually does
-2. How N-gram prediction works in practice
-3. What the results look like
-4. How vLLM implements this optimization (and its limitations)
+1. What speculative sampling does
+2. How N-gram prediction works in practice
+3. What the results look like
+4. Why verification uses rejection sampling
 
-#### What is Speculative Sampling
+## What is Speculative Sampling
 
-In standard autoregressive decoding, if the current sequence has **N tokens**, the model produces exactly **one new token** — token **N+1** — and then the next. No matter how much parallelized compute resources you have in your hardware, you can only compute for one token at a time. No matter how strong the model is, you still pay for a full forward pass per token.
+At each decode step, a lightweight predictor proposes the next **K** tokens and temporarily appends them to the sequence. The full model runs one forward pass on that extended input and **verifies** those guesses in order—accepting each token only if it matches what the model would have emitted under standard decoding.
 
-Speculative sampling breaks this one-token-at-a-time constraint.
+Verification is essentially a normal forward pass plus an accept/reject check at each speculative position. Wrong guesses are discarded; verification stops at the first rejection.
 
-Instead of waiting for the model to decide every step, we **guess ahead**. A lightweight mechanism predicts the next **K tokens**, appending them temporarily to the sequence. The full model then runs once on this extended input and verifies how many of those guesses were correct. The verification process contains almost the same procedure as the generation process, except for a minimal difference at the very end of the pipeline.
-
-The outcome looks like this:
+The outcome looks like this:
 
 - **All K guesses are correct**  
-  → You get **K + 1 tokens** from a single decode step (best case).
-- **None of the guesses are correct**  
-  → You fall back to normal decoding and get **1 token** (worst case).
-- **The first i guesses are correct**  
-  → You get **i + 1 tokens** in that step.
+  → **K + 1 tokens** from a single decode step (best case).
+- **The first guess is wrong**  
+  → **1 token**—the same as vanilla decoding (worst case).
+- **The first *i* guesses are correct** (*i* < K)  
+  → **i + 1 tokens** in that step.
 
 Visually, you can think of the sequence as:
 
 ![](/images/supercharge-your-llm-with-speculative-decoding/img-01.png)
 
-- **Verified tokens (blue)**: already prefetched and trusted
-- **Guaranteed tokens (red)**: produced by the model and always valid
-- **Speculative tokens (green)**: only valid if they match what the model would have generated anyway
+- **Verified tokens (blue)**: already accepted in a previous decode step
+- **Guaranteed tokens (red)**: the token the model emits during verification—always kept
+- **Speculative tokens (green)**: proposed guesses; kept only if verification accepts them
 
-The key insight is simple: **if the output text is predictable, we should exploit that predictability**.
+The key insight: **when output is predictable, guess ahead and verify in one pass instead of decoding token by token**.
 
-#### Using N-grams to Guess the Future
+## Using N-grams to Guess the Future
 
-So how do we guess these tokens to be generated?
+That leaves one practical question: **how do we guess?**
 
-One surprisingly strong yet simple baseline is **N-grams**.
+A surprisingly strong baseline is **N-grams**—sequences of **N consecutive tokens**. In vLLM, both **N** and **K** are configurable: **N** is the pattern length, and **K** is how many tokens to guess ahead. Below we'll use **N = 3** (trigrams) and **K = 2**.
 
-An N-gram is just a sequence of **N consecutive tokens**. In vLLM, **N is configurable**. Let’s use **N = 3** (i.e., 3-grams) for illustration.
-
-Assume the current input + output looks like this:
+Suppose the current prompt and output look like this:
 
 ![](/images/supercharge-your-llm-with-speculative-decoding/img-02.png)
 
-We take the **last 3 tokens** — EFG—and search for this sequence earlier in the text. If we find it, we simply reuse whatever tokens followed it last time.
+Take the **last 3 tokens**—**EFG**—and search for that sequence earlier in the text. If it appears, reuse whatever tokens followed that occurrence.
 
-If **K = 2** (i.e., guess 2 tokens ahead), then in this case we would predict **AB**.
+With **K = 2**, we predict **AB**. If **K = 1**, we predict **A**.
 
-If the 3-gram EFG does not exist, we back off:
+If **EFG** never appears, we back off:
 
-- Try the **2-gram** FG
-- Then the **1-gram** G
-- If even that fails, we skip speculative sampling entirely
+- Try the **2-gram** **FG**
+- Then the **1-gram** **G**
+- If all fail, skip speculative sampling for this step
 
-This backoff strategy makes N-gram speculation conservative: we only speculate when the text itself provides evidence that repetition is likely.
+This backoff keeps N-gram speculation conservative: we only guess when the text itself suggests repetition.
 
-This works especially well in structured generation tasks — outlines, summaries, boilerplate text — where repetition is common.
+That makes it especially effective for structured generation—outlines, summaries, boilerplate—where the same phrases recur.
 
-Here’s another example, in Chinese.
+It also works in other languages, Chinese for example:
 
 ![](/images/supercharge-your-llm-with-speculative-decoding/img-03.png)
 
-You don’t need to understand Chinese to notice that the three-character phrase “特斯拉” has appeared in the input text, and the latest output token is “特”, with n-grams we will predict “斯拉”, shown as the greyed suggestion.
+You do not need to read Chinese to see the pattern: **特斯拉** already appears in the input. The latest output token is **特**; trigram matching predicts **斯拉** next—the greyed suggestion in the figure. And it turns out to be a correct prediction.
 
-#### What the Results Look Like
+## What the Results Look Like
 
-With N=4 and K = 3, we can observe different decoding behaviors in practice:
+With **N = 4** and **K = 3**, each decode step can yield one to four tokens. The image below colors tokens by how many tokens were decoded **in one step**:
 
 ![](/images/supercharge-your-llm-with-speculative-decoding/img-04.png)
 
-Text is shown in **raw** **tokens**
+Each row shows **raw tokens** (not detokenized text):
 
-- **Black tokens**: speculation failed → 1 token decoded
-- **Green tokens**: 1 guess correct → 2 tokens decoded
-- **Blue tokens**: 2 guesses correct → 3 tokens decoded
-- **Purple tokens**: all guesses correct → 4 tokens decoded
+- **Black**: no guesses accepted → 1 token decoded
+- **Green**: 1 guess accepted → 2 tokens decoded
+- **Blue**: 2 guesses accepted → 3 tokens decoded
+- **Purple**: all 3 guesses accepted → 4 tokens decoded
 
-In real outputs from the outline model, successful speculation occurs frequently enough to deliver a **meaningful latency reduction**.
+On tasks that generate repetitive outputs like text summaries, speculation hits often enough that decoding gets noticeably faster.
 
-#### How vLLM Implements This
+## Why Verification Uses Rejection Sampling
 
-Speculative sampling requires a rule for deciding whether to **accept** a predicted token.
+Speculative sampling requires a rule to decide whether to **accept** a predicted token. That raises a natural question: **what criterion should validation use?** Could we simply accept a speculative token whenever it matches the main model’s Top-1 prediction?
 
-The canonical approach uses a **rejection sampler** (see: <https://arxiv.org/abs/2302.01318>), and vLLM implements that. This sampler is intentionally **probabilistic**: even if the predicted token matches the Top-1 choice of the main model, it may still be rejected.
+The short answer is: **not if we want to preserve normal sampling behavior**.
 
-Why? **Diversity**.
+Under standard sampling, the model does not always emit its single most likely token. It samples from a probability distribution over possible next tokens. If validation accepted every Top-1 match, speculative decoding would drift toward greedy decoding: the highest-probability token would always be chosen, and lower-probability but still valid tokens would be suppressed.
 
-If Top-1 predictions were always accepted, decoding would collapse into greedy search, starving lower-probability tokens and reducing output diversity.
+That is why the canonical algorithm uses **rejection sampling** (see: <https://arxiv.org/abs/2302.01318>). The draft mechanism proposes tokens, and the full model decides whether each proposal should be accepted **in a way that preserves the same output distribution as standard sampling**.
 
-The current N-gram implementation in vLLM is very simple.
+Concretely, suppose the draft model proposes token **x**. Let **q(x)** be the probability assigned by the draft model, and **p(x)** the probability assigned by the main model at the same position.
 
-At **every decode step**, it scans the **entire input sequence** to search for matching N-grams. There is **no caching**.
+- If **p(x) < q(x)**, the draft model has **overly favored** this token relative to the main model, so it is accepted only with probability **p(x) / q(x)**. In effect, rejection sampling pulls that excess probability back toward the target distribution.
+- If the token is rejected in this way, speculative verification stops at that position, and the next token is drawn from a **residual distribution** proportional to **max(0, p(x) - q(x))** over the vocabulary.
+- If **p(x) >= q(x)**, the token is accepted immediately.
 
-This results in a time complexity of:
+The key question is not simply whether the draft token matches the Top-1 choice. The real question is whether the draft model assigns that token **too much** probability relative to the target model. If it does, rejection sampling trims that excess; if it does not, the token can pass through unchanged and recovers its missing probability mass when other tokens are rejected.
 
-```
-O(N × L)
-```
+This matters because speculative decoding is not just about speed. It also needs to stay faithful to the behavior of the original sampler and the diversity of the output distribution. Rejection sampling is the piece that lets us **guess ahead without changing what distribution we are sampling from**.
 
-where:
+## Closing Thoughts
 
-- **N** = N-gram size
-- **L** = sequence length
-
-When an N-gram appears multiple times, vLLM always selects the **first occurrence**.
-
-This heuristic is cheap and easy to reason about, but clearly suboptimal in some cases. Smarter selection strategies — or caching — could further improve both accuracy and performance.
-
-#### Closing Thoughts
-
-N-gram–based speculative sampling is not glamorous. It doesn’t require another model, fancy distillation, or heavy tuning. It simply asks:
+N-gram–based speculative sampling is not glamorous. It doesn’t require training another model, or fancy distillation. It simply asks:
 
 > *“Has the model already seen something like this before?”*
 
-In structured generation workloads, the answer is often yes — and when it is, decoding becomes noticeably faster.
+In many real-world workloads, the answer is often yes — and when it is, it accelerates decoding almost for free.
 
-The current implementation leaves performance on the table, but even in its simplest form, N-gram speculation proves that **small, well-placed heuristics can still matter in modern LLM systems**.
