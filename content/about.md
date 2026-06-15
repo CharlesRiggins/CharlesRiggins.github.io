@@ -4,7 +4,7 @@ url: "/about/"
 summary: "About me"
 ---
 
-Hi, I'm Charles Riggins — an AI engineer and machine learning practitioner working on
+Hi, I'm Charles Chen — an AI engineer and machine learning practitioner working on
 large language models.
 
 I'm currently an MLE at **Tencent**, working on LLM alignment and KV-cache algorithms.
