@@ -5,8 +5,6 @@ draft: false
 math: false
 ---
 
-#### Bad robustness from logits spikes
-
 ### The Flagship Model
 
 Alibaba has recently unveiled its latest flagship Large Language Model, **Qwen2.5 Max**. They claim it outperforms **DeepSeek**, the Chinese model that rivals OpenAI’s GPT and had wiped out billions of market value from U.S. tech stocks.

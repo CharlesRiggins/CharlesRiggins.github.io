@@ -5,8 +5,6 @@ draft: false
 math: false
 ---
 
-#### A gentle introduction to LLM streaming inference
-
 ### The Limited Memory
 
 Large Language models (LLMs) nowadays are all transformers. Transformers by design have limited memory, meaning that they can only remember a specific amount of tokens at any given time. The size of the memory is also called **context length**.
