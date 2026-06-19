@@ -5,8 +5,6 @@ draft: false
 math: false
 ---
 
-> *"Fake it before you make it."*
-
 ### Fast to read, slow to write
 
 Large language models are autoregressive: they can process thousands of tokens in a single forward pass, but they still generate output one token at a time. The technical term for that generation step is **decoding**—and decoding is slow.

@@ -87,7 +87,7 @@ violates all four assumptions:
 
 ---
 
-## Challenge 1: vLLM's Hybrid Memory Allocator (HMA)
+### Challenge 1: vLLM's Hybrid Memory Allocator (HMA)
 
 **Why does vLLM need a hybrid allocator at all?** A full-attention layer must keep
 the whole prefix, while a sliding-window

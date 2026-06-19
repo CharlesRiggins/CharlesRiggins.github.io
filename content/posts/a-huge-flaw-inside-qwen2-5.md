@@ -1,5 +1,5 @@
 ---
-title: "A Huge Flaw inside Qwen2.5"
+title: "A Huge Flaw in Qwen2.5"
 date: 2025-02-17
 draft: false
 math: false
