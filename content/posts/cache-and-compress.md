@@ -44,6 +44,24 @@ A "classic" transformer KV cache looks like this:
 - The cache is paged into blocks with a **fixed block size** (say, 256 tokens).
 - All layers share one **unified block-ID space**.
 
+```mermaid
+flowchart LR
+  subgraph U["Classic model — UNIFORM"]
+    direction TB
+    u1["all layers · full attention<br/>same shape · block_size 256"]
+  end
+  subgraph V["DeepSeek-V4 — HYBRID"]
+    direction TB
+    v1["compressed full attention · bs 256"]
+    v2["sliding-window · bs 64"]
+    v3["compressor state · bs 4"]
+  end
+  U ==> V
+```
+
+<p align="center"><em>Figure 1 — A classic KV cache is one shape, one block size, one
+address space. V4 is many of each.</em></p>
+
 DeepSeek-V4 is a hybrid-attention model designed for a million-token context, and it
 violates all four assumptions:
 
@@ -66,24 +84,6 @@ violates all four assumptions:
    groups so it can apply group-specific policies, such as different eviction rules.
    Each group manages its own blocks, which means LMCache must track
    several block-ID lists of possibly different lengths.
-
-```mermaid
-flowchart LR
-  subgraph U["Classic model — UNIFORM"]
-    direction TB
-    u1["all layers · full attention<br/>same shape · block_size 256"]
-  end
-  subgraph V["DeepSeek-V4 — HYBRID"]
-    direction TB
-    v1["compressed full attention · bs 256"]
-    v2["sliding-window · bs 64"]
-    v3["compressor state · bs 4"]
-  end
-  U ==> V
-```
-
-<p align="center"><em>Figure 1 — A classic KV cache is one shape, one block size, one
-address space. V4 is many of each.</em></p>
 
 ---
 
@@ -187,7 +187,7 @@ class KernelGroupIdentity(NamedTuple):
     num_heads: int
     head_size: int
     block_size: int       # physical slots per paged block
-    engine_group_idx: int # which paged-block address space
+    engine_group_idx: int
     dtype: torch.dtype
 ```
 
@@ -252,6 +252,7 @@ flowchart TD
     direction LR
     s1["1"]:::drop --- s2["2"]:::drop --- s3["3"]:::drop --- s4["4"]:::drop --- s5["5"]:::drop --- s6["6"]:::drop --- s7["7"]:::keep --- s8["8"]:::keep
   end
+  FA ~~~ SW
   classDef keep fill:#cde6cd,stroke:#2f7d32,color:#000;
   classDef drop fill:#eee,stroke:#bbb,color:#999,stroke-dasharray:3 3;
 ```
