@@ -338,6 +338,6 @@ The prefix-cache hit collapses prefill TTFT by an **order of magnitude**.
 DeepSeek-V4 runs end-to-end on mainline LMCache today - start
 the LMCache server with the vLLM server, and prefixes are cached and reused automatically.
 
-The broader lesson generalizes well beyond one model. As frontier architectures keep
-diversifying their attention — sliding windows, latent compression, per-layer
-heterogeneity — a KV cache is no longer a uniform stack of tensors.
+AI is getting more expensive. For Claude Opus, fresh input and cached-input pricing are roughly $5 and $0.50 per million tokens — a 10× difference. DeepSeek pushes that spread to 100×, at about $0.40 versus $0.004. We are pretty much sure that the compressed attention is the reason.
+
+The broader lesson extends well beyond a single model. As frontier architectures keep diversifying their attention mechanisms — sliding windows, token-level compression, and per-layer heterogeneity — a KV cache is no longer just a uniform stack of tensors. Models will keep adopting more advanced attention algorithms to reduce prefill costs, and caching systems need to adapt proactively.
