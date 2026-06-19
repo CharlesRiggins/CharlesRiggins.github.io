@@ -38,13 +38,13 @@ buildExpired = false
     Content = "Welcome to my blog. I write about things I find interesting."
     avatar = "/images/avatar.jpeg"
 
-  [[params.socialIcons]]
-    name = "github"
-    url = "https://github.com/CharlesRiggins"
+  # [[params.socialIcons]]
+  #   name = "github"
+  #   url = "https://github.com/CharlesRiggins"
 
-  [[params.socialIcons]]
-    name = "linkedin"
-    url = "https://www.linkedin.com/in/charles-riggins-chen/"
+  # [[params.socialIcons]]
+  #   name = "linkedin"
+  #   url = "https://www.linkedin.com/in/charles-riggins-chen/"
 
 # Left nav menu (like the "About" link on Keller's site)
 [menu]
