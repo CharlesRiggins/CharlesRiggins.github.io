@@ -6,45 +6,47 @@ math: false
 mermaid: true
 ---
 
-Large-context LLM serving lives and dies by the KV cache. When a request shares a
-long prefix with an earlier one — a system prompt, a RAG document, a multi-turn
-history — recomputing that prefix's attention from scratch is pure waste.
+Long-context LLM serving lives and dies by the **KV cache**. When a request shares a
+long prefix with an earlier one — be it the system prompt, RAG documents, or a multi-turn
+history — recomputing that prefix's attention from scratch is a waste.
 
-LMCache eliminates that waste by offloading KV cache to external storage and streaming it back on a prefix hit, so prefill is
-skipped entirely for the cached portion. DeepSeek V4 tackles it another way: it compresses the prefix tokens by either **4x** or **128x**, saving it on storage and transfer. Combining the two - caching and compression - is great, but it's no easy thing.
+One way to eliminate that waste is to save the KV cache to an external storage and load it back on a prefix hit, so prefill computation is
+skipped entirely for the cached portion. This is called **caching** and that's what **LMCache** does.
+
+Another way to tackle the problem it to **compress** the prefix tokens, so that they are easier to compute, and takes less memory. That's what **DeepSeek** also thinks about and does in **DeepSeek-V4**.
+
+If we can combine the two - caching and compression - it sounds great, but that's no easy thing.
 
 For most models it is simple: the KV cache is a uniform stack of
-identically-shaped and identically-layered tensors, organized into fixed-size blocks of tokens. You get the token prefix, copy out the blocks, and copy them back later.
+identically shaped tensors, organized into fixed-size blocks of tokens. You save the blocks, and copy them back later. Simple.
 
-**DeepSeek-V4 breaks every assumption that simplicity rests on.** Supporting it forced us to rethink how we model the KV cache of a model from the ground up.
-This post walks through three problems we hit — vLLM's hybrid memory
-allocator, the kernel-group/object-group split, and sliding-window optimization —
-and how we resolved them. We close with measured numbers: at a 30K-token
-input, a warm prefix hit collapses time-to-first-token by **~10.8×** on Nvidia H20.
+DeepSeek-V4 breaks every assumption that simplicity rests on. It's a hybird model, meaning that it as diffrent types of attentions across layers. Layers do not share the same block size, and so on. Supporting it forced us to rethink how we model the KV cache of a model from the ground up.
+
+This post walks through three specific problems we hit — and how we fixed them. They are vLLM's hybrid memory allocator, the kernel-group/object-group split, and sliding-window optimization. We close with measured numbers: at a 30K-token input, a warm prefix hit collapses time-to-first-token by **~10.8×** on Nvidia H20.
 
 ---
 
-## Background: DeepSeek V4 doesn't have a uniform KV cache
+### Background: DeepSeek V4 doesn't have a uniform KV cache
 
 A "classic" transformer KV cache looks like this:
 
-- Every layer attends over the **full** context.
+- Every layer attends over the **full prefix context**.
 - Every layer's KV tensor has the **same shape**.
-- The cache is paged into blocks of a **single** `block_size` (say, 256 tokens).
-- There is **one** unified block-ID address space shared by all layers.
+- The cache is paged into blocks of a **fixed block_size** (say, 256 tokens).
+- There is a **unified** block-ID address space shared by all layers.
 
-DeepSeek-V4 is a hybrid-attention model designed for million-token context, and it
+DeepSeek-V4 is a hybrid-attention model designed for a million-token context, and it
 violates all four:
 
 1. **Multiple attention types.** V4 mixes full attention
    layers with **sliding-window** attention layers. A full-attention layer reads the whole
-   prefix; a sliding-window layer only attends to a recent window of fixed size (the last 256 tokens, for example).
+   prefix; a sliding-window layer attends only to a recent window tokens (the last 256 tokens, for example).
 
-2. **Compressed KV states with different shapes.** DeepSeek V4's Compressed Sparse Attention keeps compressed KV caches, which have different per-token byte sizes than the uncompressed ones. What's more, the Compressed Sparse Attention layers even come in two different compression ratios.
+2. **Compressed KV cache has different shapes.** DeepSeek V4's Compressed Sparse Attention keeps compressed KV caches, which have different shapes than the uncompressed ones, and hence takes up less memory space. What's more, the Compressed Sparse Attention layers even come in two different compression ratios.
 
-3. **Different block sizes per group.** Per-token byte sizes differ across layers, and vLLM still wants every layer's block to occupy a similar number of bytes — so it varies the number of tokens per block. The full-MLA layers page at block_size=256; the sliding-window state caches page at 4, 8, or 64. A single global block size no longer exists.
+3. **Different block sizes for attention layers.** vLLM still wants blocks in every layers to have a similar memory size — so it varies the number of tokens per block. The compressed layers page at block_size=256 while the compressed ones page at 64. A single global block size no longer exists.
 
-4. **Multiple independent block-ID spaces.** Because vLLM allocates these heterogeneous layers into separate groups (so it can apply different eviction strategies to different layers), each token can have several block IDs.
+4. **Multiple block-ID spaces.** Because vLLM allocates these heterogeneous layers into separate groups (so it can apply different eviction strategies, for example), we will have to deal with several block-ID lists of different lengths.
 
 ```mermaid
 flowchart LR
