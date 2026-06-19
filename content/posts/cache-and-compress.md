@@ -131,7 +131,7 @@ mirrors vLLM's group structure and translate that to LMCache semantics, so both 
 stamped onto every layer: it prevents two KV cache layers with identical tensor shapes
 from being merged when they live in disjoint block groups.
 
-### For the curious: how vLLM allocates these tensors (skippable)
+#### For the curious: how vLLM allocates these tensors (skippable)
 
 On a `DeepSeek-V4-Flash` deployment (tp=4, fp8, `block_size=256`), vLLM hands
 LMCache 167 per-layer KV tensors.
@@ -157,7 +157,7 @@ packed alongside the 20 HCA layers. To fit the 22-layer buffer, the need
 
 ---
 
-## Challenge 2: kernel groups vs. object groups
+### Challenge 2: kernel groups vs. object groups
 
 LMCache does not partition the attention layers exactly the same way vLLM does. It
 splits a vLLM group if their head sizes differ, and possibly merges some groups on storage to reduce
@@ -176,7 +176,7 @@ flowchart TD
 <p align="center"><em>Figure 3 — LMCache's three-layer model. Kernel groups are the
 unit of <b>transfer</b>; object groups are the unit of <b>prefix matching</b>.</em></p>
 
-### Kernel groups: the unit of *transfer*
+#### Kernel groups: the unit of *transfer*
 
 A **kernel group** is the set of layers that can be moved by a single GPU copy-kernel
 launch sharing one shape descriptor. Membership is decided by a six-field identity:
@@ -210,7 +210,7 @@ def calculate_slots(self, num_tokens: int) -> int:
     return num_tokens * self.slots_per_block // self.tokens_per_block
 ```
 
-### Object groups: the unit of *prefix matching*
+#### Object groups: the unit of *prefix matching*
 
 An **object group** is one or more kernel groups whose KV is stored together in a
 single cache object — and, critically, **share one prefix-matching policy.** This
@@ -230,7 +230,7 @@ earlier one, while the full attention group reads the whole prompt. That saves a
 
 ---
 
-## Challenge 3: Sliding-window optimization — don't cache what you'll never read
+### Challenge 3: Sliding-window optimization — don't cache what you'll never read
 
 Now let's consider the case where the window is smaller than a chunk.
 
@@ -284,7 +284,7 @@ footprint — acting as if those blocks don't exist, safely.
 
 ---
 
-## One more trap: strided KV tensors
+### One more trap: strided KV tensors
 
 V4's aliased KV layout means a layer's tensor
 is often a non-contiguous strided view over a shared raw buffer. A copy kernel that
@@ -294,7 +294,7 @@ memory layout rather than an idealized one (i.e., the exact block size).
 
 ---
 
-## Results
+### Results
 
 We validated the full path end-to-end on `DeepSeek-V4-Flash` (tp=4, fp8,
 `block_size=256`) with the LMCache MP server. The registered cache resolves into 8
@@ -333,7 +333,7 @@ The prefix-cache hit collapses prefill TTFT by an **order of magnitude**.
 
 ---
 
-## Takeaways
+### Takeaways
 
 DeepSeek-V4 runs end-to-end on mainline LMCache today - start
 the LMCache server with the vLLM server, and prefixes are cached and reused automatically.
