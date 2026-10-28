@@ -5,8 +5,6 @@ draft: false
 math: false
 ---
 
-#### A walkthrough of the AutoAWQ library
-
 Memory is king.
 
 Modern large language models (LLMs), with almost no exception, are transformer-based models. It means the inference speed of LLM is typically determined by the speed of memory loading and storing. Also, a larger memory allows for a broader context window due to the use of KV cache.

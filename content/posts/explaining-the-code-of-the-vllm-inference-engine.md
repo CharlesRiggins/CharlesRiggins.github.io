@@ -5,8 +5,6 @@ draft: false
 math: false
 ---
 
-#### A casual look into the vLLM codebase
-
 ### vLLM
 
 If you are familiar with large language models (LLMs), you probably have heard of the vLLM. I believe the “v” in its name stands for *virtual* because it borrows the concept of virtual memory from the operating systems.

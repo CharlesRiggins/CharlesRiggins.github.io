@@ -4,7 +4,7 @@ url: "/about/"
 summary: "About me"
 ---
 
-Hi, I'm Charles Riggins — an AI researcher working on large language models.
+Hi, I'm Charles Chen — an AI researcher working on large language models.
 
 I'm currently a Senior Researcher at **NVIDIA**, exploring general agentic AI. I'm extremely interested in understanding why LLMs work. That includes both understanding what's going on inside them (AI interpretability) and why the simple yet powerful scaling law exists in the first place.
 

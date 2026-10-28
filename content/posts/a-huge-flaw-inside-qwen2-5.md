@@ -1,11 +1,9 @@
 ---
-title: "A Huge Flaw inside Qwen2.5"
+title: "A Huge Flaw in Qwen2.5"
 date: 2025-02-17
 draft: false
 math: false
 ---
-
-#### Bad robustness from logits spikes
 
 ### The Flagship Model
 
